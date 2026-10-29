@@ -1,0 +1,117 @@
+diff --git a/Shop.Tests/DiscountTests.cs b/Shop.Tests/DiscountTests.cs
+new file mode 100644
+index 0000000..0ea60e4
+--- /dev/null
++++ b/Shop.Tests/DiscountTests.cs
+@@ -0,0 +1,20 @@
++using Shop;
++
++public class DiscountTests
++{
++    [Fact]
++    public void Loyal_discount_is_five_percent_of_the_subtotal() =>
++        Assert.Equal(5m, new LoyalDiscount().DiscountOn(100m));
++
++    [Fact]
++    public void Loyal_discount_applies_to_loyal_customers() =>
++        Assert.Equal(CustomerType.Loyal, new LoyalDiscount().Customer);
++
++    [Fact]
++    public void Employee_discount_is_twenty_percent_of_the_subtotal() =>
++        Assert.Equal(20m, new EmployeeDiscount().DiscountOn(100m));
++
++    [Fact]
++    public void Employee_discount_applies_to_employees() =>
++        Assert.Equal(CustomerType.Employee, new EmployeeDiscount().Customer);
++}
+diff --git a/Shop.Tests/PriceCalculatorTests.cs b/Shop.Tests/PriceCalculatorTests.cs
+index 1e26a09..8c0217a 100644
+--- a/Shop.Tests/PriceCalculatorTests.cs
++++ b/Shop.Tests/PriceCalculatorTests.cs
+@@ -12,4 +12,8 @@ public class PriceCalculatorTests
+     [Fact]
+     public void Loyal_customer_gets_five_percent_off() =>
+         Assert.Equal(237.50m, PriceCalculator.Total(OrderOf(CustomerType.Loyal)));
++
++    [Fact]
++    public void Employee_customer_gets_twenty_percent_off() =>
++        Assert.Equal(200m, PriceCalculator.Total(OrderOf(CustomerType.Employee)));
+ }
+diff --git a/Shop/Discounts/EmployeeDiscount.cs b/Shop/Discounts/EmployeeDiscount.cs
+new file mode 100644
+index 0000000..e24458f
+--- /dev/null
++++ b/Shop/Discounts/EmployeeDiscount.cs
+@@ -0,0 +1,8 @@
++namespace Shop;
++
++public sealed class EmployeeDiscount : ICustomerDiscount
++{
++    public CustomerType Customer => CustomerType.Employee;
++
++    public decimal DiscountOn(decimal subtotal) => subtotal * 0.20m;
++}
+diff --git a/Shop/Discounts/ICustomerDiscount.cs b/Shop/Discounts/ICustomerDiscount.cs
+new file mode 100644
+index 0000000..adc8ce8
+--- /dev/null
++++ b/Shop/Discounts/ICustomerDiscount.cs
+@@ -0,0 +1,8 @@
++namespace Shop;
++
++public interface ICustomerDiscount
++{
++    CustomerType Customer { get; }
++
++    decimal DiscountOn(decimal subtotal);
++}
+diff --git a/Shop/Discounts/LoyalDiscount.cs b/Shop/Discounts/LoyalDiscount.cs
+new file mode 100644
+index 0000000..1bf2bc1
+--- /dev/null
++++ b/Shop/Discounts/LoyalDiscount.cs
+@@ -0,0 +1,8 @@
++namespace Shop;
++
++public sealed class LoyalDiscount : ICustomerDiscount
++{
++    public CustomerType Customer => CustomerType.Loyal;
++
++    public decimal DiscountOn(decimal subtotal) => subtotal * 0.05m;
++}
+diff --git a/Shop/Pricing.cs b/Shop/Pricing.cs
+index 1628253..f90b69d 100644
+--- a/Shop/Pricing.cs
++++ b/Shop/Pricing.cs
+@@ -1,6 +1,6 @@
+ namespace Shop;
+ 
+-public enum CustomerType { Regular, Loyal }
++public enum CustomerType { Regular, Loyal, Employee }
+ 
+ public record OrderLine(string Sku, decimal UnitPrice, int Quantity);
+ 
+@@ -8,14 +8,18 @@ public record Order(CustomerType Customer, IReadOnlyList<OrderLine> Lines);
+ 
+ public static class PriceCalculator
+ {
++    // To add a customer type: add it to CustomerType, write its ICustomerDiscount, register it here.
++    private static readonly IReadOnlyDictionary<CustomerType, ICustomerDiscount> Discounts =
++        new ICustomerDiscount[]
++        {
++            new LoyalDiscount(),
++            new EmployeeDiscount(),
++        }.ToDictionary(d => d.Customer);
++
+     public static decimal Total(Order order)
+     {
+         var subtotal = order.Lines.Sum(l => l.UnitPrice * l.Quantity);
+-        var discount = order.Customer switch
+-        {
+-            CustomerType.Loyal => subtotal * 0.05m,
+-            _ => 0m
+-        };
++        var discount = Discounts.TryGetValue(order.Customer, out var d) ? d.DiscountOn(subtotal) : 0m;
+         return subtotal - discount;
+     }
+ }

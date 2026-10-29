@@ -1,0 +1,57 @@
+diff --git a/Shop.Tests/PriceCalculatorTests.cs b/Shop.Tests/PriceCalculatorTests.cs
+index 1e26a09..9de0d2b 100644
+--- a/Shop.Tests/PriceCalculatorTests.cs
++++ b/Shop.Tests/PriceCalculatorTests.cs
+@@ -12,4 +12,13 @@ public class PriceCalculatorTests
+     [Fact]
+     public void Loyal_customer_gets_five_percent_off() =>
+         Assert.Equal(237.50m, PriceCalculator.Total(OrderOf(CustomerType.Loyal)));
++
++    [Fact]
++    public void Employee_gets_twenty_percent_off() =>
++        Assert.Equal(200m, PriceCalculator.Total(OrderOf(CustomerType.Employee)));
++
++    [Fact]
++    public void Every_customer_type_has_a_discount_rate() =>
++        Assert.All(Enum.GetValues<CustomerType>(), t => Assert.True(
++            PriceCalculator.DiscountRates.ContainsKey(t), $"Missing discount rate for {t}"));
+ }
+diff --git a/Shop/Pricing.cs b/Shop/Pricing.cs
+index 1628253..9b01493 100644
+--- a/Shop/Pricing.cs
++++ b/Shop/Pricing.cs
+@@ -1,6 +1,6 @@
+ namespace Shop;
+ 
+-public enum CustomerType { Regular, Loyal }
++public enum CustomerType { Regular, Loyal, Employee }
+ 
+ public record OrderLine(string Sku, decimal UnitPrice, int Quantity);
+ 
+@@ -8,14 +8,20 @@ public record Order(CustomerType Customer, IReadOnlyList<OrderLine> Lines);
+ 
+ public static class PriceCalculator
+ {
++    // To add a customer type: add it to CustomerType and give it a rate here.
++    public static readonly IReadOnlyDictionary<CustomerType, decimal> DiscountRates =
++        new Dictionary<CustomerType, decimal>
++        {
++            [CustomerType.Regular] = 0m,
++            [CustomerType.Loyal] = 0.05m,
++            [CustomerType.Employee] = 0.20m,
++        };
++
+     public static decimal Total(Order order)
+     {
+         var subtotal = order.Lines.Sum(l => l.UnitPrice * l.Quantity);
+-        var discount = order.Customer switch
+-        {
+-            CustomerType.Loyal => subtotal * 0.05m,
+-            _ => 0m
+-        };
+-        return subtotal - discount;
++        if (!DiscountRates.TryGetValue(order.Customer, out var rate))
++            throw new InvalidOperationException($"No discount rate defined for customer type {order.Customer}.");
++        return subtotal - subtotal * rate;
+     }
+ }

@@ -1,0 +1,276 @@
+diff --git a/Shop.Tests/DiscountTests.cs b/Shop.Tests/DiscountTests.cs
+new file mode 100644
+index 0000000..6be000c
+--- /dev/null
++++ b/Shop.Tests/DiscountTests.cs
+@@ -0,0 +1,62 @@
++using Shop;
++
++public class NoDiscountTests
++{
++    [Fact]
++    public void Takes_nothing_off() => Assert.Equal(0m, new NoDiscount().AmountFor(250m));
++
++    [Fact]
++    public void Describes_itself() => Assert.Equal("no discount", new NoDiscount().Description);
++}
++
++public class PercentageDiscountTests
++{
++    [Fact]
++    public void Takes_the_percentage_of_the_subtotal() =>
++        Assert.Equal(12.50m, new PercentageDiscount(5m).AmountFor(250m));
++
++    [Fact]
++    public void Describes_itself() => Assert.Equal("5% off", new PercentageDiscount(5m).Description);
++}
++
++public class CappedPercentageDiscountTests
++{
++    private readonly CappedPercentageDiscount _discount = new(10m, cap: 30m);
++
++    [Theory]
++    [InlineData(250, 25)]
++    [InlineData(300, 30)]
++    [InlineData(400, 30)]
++    [InlineData(5000, 30)]
++    public void Takes_the_percentage_but_never_more_than_the_cap(decimal subtotal, decimal expected) =>
++        Assert.Equal(expected, _discount.AmountFor(subtotal));
++
++    [Fact]
++    public void Describes_itself() => Assert.Equal("10% off, max 30", _discount.Description);
++}
++
++public class TieredPercentageDiscountTests
++{
++    private readonly TieredPercentageDiscount _discount = new(10m, threshold: 1000m, percentAbove: 15m);
++
++    [Theory]
++    [InlineData(500, 50)]
++    [InlineData(1000, 100)]
++    [InlineData(1001, 150.15)]
++    [InlineData(1200, 180)]
++    public void Takes_the_higher_percentage_of_the_whole_subtotal_above_the_threshold(decimal subtotal, decimal expected) =>
++        Assert.Equal(expected, _discount.AmountFor(subtotal));
++
++    [Fact]
++    public void Describes_itself() => Assert.Equal("10% off, 15% off above 1,000", _discount.Description);
++}
++
++public class DiscountCatalogTests
++{
++    public static TheoryData<CustomerType> AllCustomerTypes => new(Enum.GetValues<CustomerType>());
++
++    [Theory]
++    [MemberData(nameof(AllCustomerTypes))]
++    public void Every_customer_type_has_a_discount_rule(CustomerType customer) =>
++        Assert.NotNull(DiscountCatalog.For(customer));
++}
+diff --git a/Shop.Tests/PriceCalculatorTests.cs b/Shop.Tests/PriceCalculatorTests.cs
+index 1e26a09..8604d44 100644
+--- a/Shop.Tests/PriceCalculatorTests.cs
++++ b/Shop.Tests/PriceCalculatorTests.cs
+@@ -5,6 +5,9 @@ public class PriceCalculatorTests
+     private static Order OrderOf(CustomerType customer) =>
+         new(customer, [new OrderLine("A", 100m, 2), new OrderLine("B", 50m, 1)]);
+ 
++    private static Order OrderWithSubtotal(CustomerType customer, decimal subtotal) =>
++        new(customer, [new OrderLine("A", subtotal, 1)]);
++
+     [Fact]
+     public void Regular_customer_pays_the_subtotal() =>
+         Assert.Equal(250m, PriceCalculator.Total(OrderOf(CustomerType.Regular)));
+@@ -12,4 +15,20 @@ public class PriceCalculatorTests
+     [Fact]
+     public void Loyal_customer_gets_five_percent_off() =>
+         Assert.Equal(237.50m, PriceCalculator.Total(OrderOf(CustomerType.Loyal)));
++
++    [Fact]
++    public void Student_gets_ten_percent_off() =>
++        Assert.Equal(225m, PriceCalculator.Total(OrderOf(CustomerType.Student)));
++
++    [Fact]
++    public void Student_discount_is_capped_at_30() =>
++        Assert.Equal(970m, PriceCalculator.Total(OrderWithSubtotal(CustomerType.Student, 1000m)));
++
++    [Fact]
++    public void Partner_gets_ten_percent_off_up_to_1000() =>
++        Assert.Equal(900m, PriceCalculator.Total(OrderWithSubtotal(CustomerType.Partner, 1000m)));
++
++    [Fact]
++    public void Partner_gets_fifteen_percent_off_the_whole_order_above_1000() =>
++        Assert.Equal(1020m, PriceCalculator.Total(OrderWithSubtotal(CustomerType.Partner, 1200m)));
+ }
+diff --git a/Shop.Tests/ReceiptTests.cs b/Shop.Tests/ReceiptTests.cs
+new file mode 100644
+index 0000000..2d10e7e
+--- /dev/null
++++ b/Shop.Tests/ReceiptTests.cs
+@@ -0,0 +1,30 @@
++using Shop;
++
++public class ReceiptTests
++{
++    private static Order OrderOf(CustomerType customer) =>
++        new(customer, [new OrderLine("A", 100m, 2), new OrderLine("B", 50m, 1)]);
++
++    [Theory]
++    [InlineData(CustomerType.Regular, "Regular: no discount")]
++    [InlineData(CustomerType.Loyal, "Loyal: 5% off")]
++    [InlineData(CustomerType.Student, "Student: 10% off, max 30")]
++    [InlineData(CustomerType.Partner, "Partner: 10% off, 15% off above 1,000")]
++    public void Shows_the_customer_discount_as_one_line(CustomerType customer, string expected) =>
++        Assert.Contains(expected, Receipt.Lines(OrderOf(customer)));
++
++    [Fact]
++    public void Lists_items_subtotal_discount_and_total()
++    {
++        string[] expected =
++        [
++            "A 2 x 100.00 = 200.00",
++            "B 1 x 50.00 = 50.00",
++            "Subtotal: 250.00",
++            "Student: 10% off, max 30",
++            "Discount: -25.00",
++            "Total: 225.00",
++        ];
++        Assert.Equal(expected, Receipt.Lines(OrderOf(CustomerType.Student)));
++    }
++}
+diff --git a/Shop/Discounts.cs b/Shop/Discounts.cs
+new file mode 100644
+index 0000000..236abb2
+--- /dev/null
++++ b/Shop/Discounts.cs
+@@ -0,0 +1,70 @@
++using System.Globalization;
++
++namespace Shop;
++
++/// <summary>A discount rule: how much to take off a subtotal, and how to describe it on a receipt.</summary>
++public interface IDiscount
++{
++    decimal AmountFor(decimal subtotal);
++
++    /// <summary>Text shown after the customer type on the receipt, e.g. "5% off".</summary>
++    string Description { get; }
++}
++
++public sealed class NoDiscount : IDiscount
++{
++    public decimal AmountFor(decimal subtotal) => 0m;
++
++    public string Description => "no discount";
++}
++
++public sealed class PercentageDiscount(decimal percent) : IDiscount
++{
++    public decimal AmountFor(decimal subtotal) => subtotal * percent / 100m;
++
++    public string Description => $"{Format.Percent(percent)} off";
++}
++
++public sealed class CappedPercentageDiscount(decimal percent, decimal cap) : IDiscount
++{
++    public decimal AmountFor(decimal subtotal) => Math.Min(subtotal * percent / 100m, cap);
++
++    public string Description => $"{Format.Percent(percent)} off, max {Format.Amount(cap)}";
++}
++
++/// <summary>
++/// <paramref name="percent"/> off when the subtotal is up to and including <paramref name="threshold"/>;
++/// <paramref name="percentAbove"/> off the whole subtotal when it is above the threshold.
++/// </summary>
++public sealed class TieredPercentageDiscount(decimal percent, decimal threshold, decimal percentAbove) : IDiscount
++{
++    public decimal AmountFor(decimal subtotal) =>
++        subtotal * (subtotal > threshold ? percentAbove : percent) / 100m;
++
++    public string Description =>
++        $"{Format.Percent(percent)} off, {Format.Percent(percentAbove)} off above {Format.Amount(threshold)}";
++}
++
++/// <summary>The one place that says which discount rule applies to which customer type.</summary>
++public static class DiscountCatalog
++{
++    private static readonly Dictionary<CustomerType, IDiscount> Rules = new()
++    {
++        [CustomerType.Regular] = new NoDiscount(),
++        [CustomerType.Loyal] = new PercentageDiscount(5m),
++        [CustomerType.Student] = new CappedPercentageDiscount(10m, cap: 30m),
++        [CustomerType.Partner] = new TieredPercentageDiscount(10m, threshold: 1000m, percentAbove: 15m),
++    };
++
++    public static IDiscount For(CustomerType customer) =>
++        Rules.TryGetValue(customer, out var rule)
++            ? rule
++            : throw new InvalidOperationException($"No discount rule registered for customer type {customer}.");
++}
++
++internal static class Format
++{
++    public static string Percent(decimal percent) => percent.ToString("0.##", CultureInfo.InvariantCulture) + "%";
++
++    public static string Amount(decimal amount) => amount.ToString("#,0.##", CultureInfo.InvariantCulture);
++}
+diff --git a/Shop/Pricing.cs b/Shop/Pricing.cs
+index 1628253..cd0fb3c 100644
+--- a/Shop/Pricing.cs
++++ b/Shop/Pricing.cs
+@@ -1,6 +1,6 @@
+ namespace Shop;
+ 
+-public enum CustomerType { Regular, Loyal }
++public enum CustomerType { Regular, Loyal, Student, Partner }
+ 
+ public record OrderLine(string Sku, decimal UnitPrice, int Quantity);
+ 
+@@ -8,14 +8,9 @@ public record Order(CustomerType Customer, IReadOnlyList<OrderLine> Lines);
+ 
+ public static class PriceCalculator
+ {
+-    public static decimal Total(Order order)
+-    {
+-        var subtotal = order.Lines.Sum(l => l.UnitPrice * l.Quantity);
+-        var discount = order.Customer switch
+-        {
+-            CustomerType.Loyal => subtotal * 0.05m,
+-            _ => 0m
+-        };
+-        return subtotal - discount;
+-    }
++    public static decimal Subtotal(Order order) => order.Lines.Sum(l => l.UnitPrice * l.Quantity);
++
++    public static decimal Discount(Order order) => DiscountCatalog.For(order.Customer).AmountFor(Subtotal(order));
++
++    public static decimal Total(Order order) => Subtotal(order) - Discount(order);
+ }
+diff --git a/Shop/Receipt.cs b/Shop/Receipt.cs
+new file mode 100644
+index 0000000..6149f64
+--- /dev/null
++++ b/Shop/Receipt.cs
+@@ -0,0 +1,23 @@
++using System.Globalization;
++
++namespace Shop;
++
++public static class Receipt
++{
++    public static IReadOnlyList<string> Lines(Order order)
++    {
++        var lines = order.Lines
++            .Select(l => $"{l.Sku} {l.Quantity} x {Money(l.UnitPrice)} = {Money(l.UnitPrice * l.Quantity)}")
++            .ToList();
++        lines.Add($"Subtotal: {Money(PriceCalculator.Subtotal(order))}");
++        lines.Add(DiscountLine(order));
++        lines.Add($"Discount: -{Money(PriceCalculator.Discount(order))}");
++        lines.Add($"Total: {Money(PriceCalculator.Total(order))}");
++        return lines;
++    }
++
++    public static string DiscountLine(Order order) =>
++        $"{order.Customer}: {DiscountCatalog.For(order.Customer).Description}";
++
++    private static string Money(decimal amount) => amount.ToString("0.00", CultureInfo.InvariantCulture);
++}

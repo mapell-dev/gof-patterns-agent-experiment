@@ -1,0 +1,9 @@
+35	0	Shop.Tests/DiscountTests.cs
+33	0	Shop.Tests/PriceCalculatorTests.cs
+22	0	Shop/Discounts/CustomerDiscounts.cs
+11	0	Shop/Discounts/IDiscount.cs
+8	0	Shop/Discounts/LoyalDiscount.cs
+8	0	Shop/Discounts/NoDiscount.cs
+12	0	Shop/Discounts/PartnerDiscount.cs
+10	0	Shop/Discounts/StudentDiscount.cs
+11	8	Shop/Pricing.cs

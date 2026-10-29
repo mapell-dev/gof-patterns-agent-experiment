@@ -1,0 +1,26 @@
+| run | task | var | rep | claude_rc | test_rc | passed | failed | new_prod_types | prod_types | new_test_types | files_added | lines_+ | lines_- | skill_listed | skill_loads | model | version | turns | cost_usd | denials | agent_ran_tests | result |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 01-T1a-r1 | T1 | a | 1 | 0 | 0 | 4 | 0 | 0 |  | 0 | 0 | 22 | 7 | False | 0 | claude-opus-5-5 | 2.1.310 | 11 | 0.18 | 2 | True | success |
+| 02-T1b-r1 | T1 | b | 1 | 0 | 0 | 4 | 0 | 4 | interface IDiscountStrategy, class NoDiscount, class PercentageDiscount, class DiscountStrategies | 0 | 0 | 45 | 6 | False | 0 | claude-opus-5-5 | 2.1.310 | 8 | 0.16 | 1 | True | success |
+| 03-T1c-r1 | T1 | c | 1 | 0 | 0 | 13 | 0 | 4 | interface IDiscount, class NoDiscount, class PercentageDiscount, class Discounts | 1 | 2 | 94 | 8 | False | 0 | claude-opus-5-5 | 2.1.310 | 12 | 0.23 | 2 | True | success |
+| 04-T1d-r1 | T1 | d | 1 | 0 | 0 | 4 | 0 | 0 |  | 0 | 0 | 22 | 7 | True | 1 | claude-opus-5-5 | 2.1.310 | 12 | 0.34 | 4 | False | success |
+| 05-T2a-r1 | T2 | a | 1 | 0 | 0 | 5 | 0 | 0 |  | 0 | 0 | 19 | 1 | False | 0 | claude-opus-5-5 | 2.1.310 | 8 | 0.25 | 4 | False | success |
+| 06-T2b-r1 | T2 | b | 1 | 0 | 0 | 5 | 0 | 3 | interface IDiscountStrategy, class CustomerDiscount, class LargeOrderDiscount | 0 | 0 | 42 | 7 | False | 0 | claude-opus-5-5 | 2.1.310 | 14 | 0.27 | 2 | False | success |
+| 07-T2c-r1 | T2 | c | 1 | 0 | 0 | 5 | 0 | 0 |  | 0 | 0 | 17 | 1 | False | 0 | claude-opus-5-5 | 2.1.310 | 14 | 0.31 | 2 | False | success |
+| 08-T2d-r1 | T2 | d | 1 | 0 | 0 | 4 | 0 | 0 |  | 0 | 0 | 14 | 1 | True | 0 | claude-opus-5-5 | 2.1.310 | 10 | 0.15 | 2 | False | success |
+| 09-T1a-r2 | T1 | a | 2 | 0 | 0 | 4 | 0 | 0 |  | 0 | 0 | 22 | 7 | False | 0 | claude-opus-5-5 | 2.1.310 | 9 | 0.33 | 4 | False | success |
+| 10-T1b-r2 | T1 | b | 2 | 0 | 0 | 4 | 0 | 3 | interface IDiscountStrategy, class NoDiscount, class PercentageDiscount | 0 | 0 | 42 | 7 | False | 0 | claude-opus-5-5 | 2.1.310 | 10 | 0.42 | 4 | False | success |
+| 11-T1c-r2 | T1 | c | 2 | 0 | 0 | 9 | 0 | 5 | interface ICustomerDiscount, class NoDiscount, class LoyalDiscount, class EmployeeDiscount, class CustomerDiscounts | 1 | 2 | 72 | 6 | False | 0 | claude-opus-5-5 | 2.1.310 | 12 | 0.22 | 1 | True | success |
+| 12-T1d-r2 | T1 | d | 2 | 0 | 0 | 4 | 0 | 0 |  | 0 | 0 | 21 | 7 | True | 1 | claude-opus-5-5 | 2.1.310 | 11 | 0.17 | 1 | True | success |
+| 13-T2a-r2 | T2 | a | 2 | 0 | 0 | 5 | 0 | 0 |  | 0 | 0 | 15 | 1 | False | 0 | claude-opus-5-5 | 2.1.310 | 8 | 0.14 | 1 | True | success |
+| 14-T2b-r2 | T2 | b | 2 | 0 | 0 | 5 | 0 | 3 | interface IDiscountStrategy, class CustomerDiscount, class LargeOrderDiscount | 0 | 0 | 47 | 7 | False | 0 | claude-opus-5-5 | 2.1.310 | 13 | 0.21 | 2 | True | success |
+| 15-T2c-r2 | T2 | c | 2 | 0 | 0 | 3 | 0 | 0 |  | 0 | 0 | 13 | 1 | False | 0 | claude-opus-5-5 | 2.1.310 | 13 | 0.3 | 3 | True | success |
+| 16-T2d-r2 | T2 | d | 2 | 0 | 0 | 5 | 0 | 0 |  | 0 | 0 | 18 | 1 | True | 0 | claude-opus-5-5 | 2.1.310 | 10 | 0.28 | 4 | False | success |
+| 17-T1a-r3 | T1 | a | 3 | 0 | 0 | 4 | 0 | 0 |  | 0 | 0 | 24 | 7 | False | 0 | claude-opus-5-5 | 2.1.310 | 8 | 0.16 | 1 | True | success |
+| 18-T1b-r3 | T1 | b | 3 | 0 | 0 | 4 | 0 | 4 | interface IDiscountStrategy, class NoDiscount, class PercentageDiscount, class DiscountStrategies | 0 | 0 | 45 | 6 | False | 0 | claude-opus-5-5 | 2.1.310 | 8 | 0.16 | 1 | True | success |
+| 19-T1c-r3 | T1 | c | 3 | 0 | 0 | 7 | 0 | 3 | class EmployeeDiscount, interface ICustomerDiscount, class LoyalDiscount | 1 | 4 | 58 | 6 | False | 0 | claude-opus-5-5 | 2.1.310 | 14 | 0.39 | 4 | True | success |
+| 20-T1d-r3 | T1 | d | 3 | 0 | 0 | 3 | 0 | 0 |  | 0 | 0 | 14 | 7 | True | 1 | claude-opus-5-5 | 2.1.310 | 15 | 0.24 | 2 | False | success |
+| 21-T2a-r3 | T2 | a | 3 | 0 | 0 | 5 | 0 | 0 |  | 0 | 0 | 18 | 1 | False | 0 | claude-opus-5-5 | 2.1.310 | 10 | 0.16 | 2 | False | success |
+| 22-T2b-r3 | T2 | b | 3 | 0 | 0 | 4 | 0 | 4 | interface IDiscountStrategy, class NoDiscount, class LoyalCustomerDiscount, class LargeOrderDiscount | 0 | 0 | 43 | 6 | False | 0 | claude-opus-5-5 | 2.1.310 | 10 | 0.25 | 2 | False | success |
+| 23-T2c-r3 | T2 | c | 3 | 0 | 0 | 5 | 0 | 0 |  | 0 | 0 | 20 | 1 | False | 0 | claude-opus-5-5 | 2.1.310 | 8 | 0.14 | 1 | True | success |
+| 24-T2d-r3 | T2 | d | 3 | 0 | 0 | 5 | 0 | 0 |  | 0 | 0 | 15 | 1 | True | 0 | claude-opus-5-5 | 2.1.310 | 8 | 0.13 | 1 | True | success |

@@ -1,0 +1,141 @@
+diff --git a/Shop.Tests/DiscountTests.cs b/Shop.Tests/DiscountTests.cs
+new file mode 100644
+index 0000000..ff933f6
+--- /dev/null
++++ b/Shop.Tests/DiscountTests.cs
+@@ -0,0 +1,22 @@
++using Shop;
++
++public class DiscountTests
++{
++    [Fact]
++    public void No_discount_takes_nothing_off() =>
++        Assert.Equal(0m, new NoDiscount().Amount(250m));
++
++    [Theory]
++    [InlineData(0.05, 250, 12.50)]
++    [InlineData(0.20, 250, 50)]
++    [InlineData(0, 250, 0)]
++    [InlineData(1, 250, 250)]
++    public void Percentage_discount_takes_its_rate_off_the_subtotal(decimal rate, decimal subtotal, decimal expected) =>
++        Assert.Equal(expected, new PercentageDiscount(rate).Amount(subtotal));
++
++    [Theory]
++    [InlineData(-0.01)]
++    [InlineData(1.01)]
++    public void Percentage_discount_rejects_rates_outside_zero_to_one(decimal rate) =>
++        Assert.Throws<ArgumentOutOfRangeException>(() => new PercentageDiscount(rate));
++}
+diff --git a/Shop.Tests/PriceCalculatorTests.cs b/Shop.Tests/PriceCalculatorTests.cs
+index 1e26a09..f322e1b 100644
+--- a/Shop.Tests/PriceCalculatorTests.cs
++++ b/Shop.Tests/PriceCalculatorTests.cs
+@@ -12,4 +12,27 @@ public class PriceCalculatorTests
+     [Fact]
+     public void Loyal_customer_gets_five_percent_off() =>
+         Assert.Equal(237.50m, PriceCalculator.Total(OrderOf(CustomerType.Loyal)));
++
++    [Fact]
++    public void Employee_gets_twenty_percent_off() =>
++        Assert.Equal(200m, PriceCalculator.Total(OrderOf(CustomerType.Employee)));
++
++    [Fact]
++    public void Every_customer_type_has_a_discount_registered()
++    {
++        foreach (var type in Enum.GetValues<CustomerType>())
++            Assert.True(Discounts.ByCustomerType.ContainsKey(type), $"No discount registered for {type}.");
++    }
++
++    [Fact]
++    public void Applies_the_discount_registered_for_the_customer_type()
++    {
++        var discounts = new Dictionary<CustomerType, IDiscount> { [CustomerType.Regular] = new PercentageDiscount(0.10m) };
++        Assert.Equal(225m, PriceCalculator.Total(OrderOf(CustomerType.Regular), discounts));
++    }
++
++    [Fact]
++    public void Throws_when_no_discount_is_registered_for_the_customer_type() =>
++        Assert.Throws<InvalidOperationException>(() =>
++            PriceCalculator.Total(OrderOf(CustomerType.Loyal), new Dictionary<CustomerType, IDiscount>()));
+ }
+diff --git a/Shop/Discounts.cs b/Shop/Discounts.cs
+new file mode 100644
+index 0000000..dff1d06
+--- /dev/null
++++ b/Shop/Discounts.cs
+@@ -0,0 +1,42 @@
++namespace Shop;
++
++/// <summary>Computes how much to take off an order's subtotal.</summary>
++public interface IDiscount
++{
++    decimal Amount(decimal subtotal);
++}
++
++public sealed class NoDiscount : IDiscount
++{
++    public decimal Amount(decimal subtotal) => 0m;
++}
++
++public sealed class PercentageDiscount : IDiscount
++{
++    public PercentageDiscount(decimal rate)
++    {
++        if (rate is < 0m or > 1m)
++            throw new ArgumentOutOfRangeException(nameof(rate), rate, "Rate must be between 0 and 1.");
++        Rate = rate;
++    }
++
++    public decimal Rate { get; }
++
++    public decimal Amount(decimal subtotal) => subtotal * Rate;
++}
++
++/// <summary>
++/// The discount each customer type gets. To add a customer type, add it to
++/// <see cref="CustomerType"/> and register its discount here. Discounts that
++/// aren't a flat percentage get their own <see cref="IDiscount"/> implementation.
++/// </summary>
++public static class Discounts
++{
++    public static IReadOnlyDictionary<CustomerType, IDiscount> ByCustomerType { get; } =
++        new Dictionary<CustomerType, IDiscount>
++        {
++            [CustomerType.Regular] = new NoDiscount(),
++            [CustomerType.Loyal] = new PercentageDiscount(0.05m),
++            [CustomerType.Employee] = new PercentageDiscount(0.20m),
++        };
++}
+diff --git a/Shop/Pricing.cs b/Shop/Pricing.cs
+index 1628253..f3957ba 100644
+--- a/Shop/Pricing.cs
++++ b/Shop/Pricing.cs
+@@ -1,6 +1,6 @@
+ namespace Shop;
+ 
+-public enum CustomerType { Regular, Loyal }
++public enum CustomerType { Regular, Loyal, Employee }
+ 
+ public record OrderLine(string Sku, decimal UnitPrice, int Quantity);
+ 
+@@ -8,14 +8,13 @@ public record Order(CustomerType Customer, IReadOnlyList<OrderLine> Lines);
+ 
+ public static class PriceCalculator
+ {
+-    public static decimal Total(Order order)
++    public static decimal Total(Order order) => Total(order, Discounts.ByCustomerType);
++
++    public static decimal Total(Order order, IReadOnlyDictionary<CustomerType, IDiscount> discounts)
+     {
+         var subtotal = order.Lines.Sum(l => l.UnitPrice * l.Quantity);
+-        var discount = order.Customer switch
+-        {
+-            CustomerType.Loyal => subtotal * 0.05m,
+-            _ => 0m
+-        };
+-        return subtotal - discount;
++        if (!discounts.TryGetValue(order.Customer, out var discount))
++            throw new InvalidOperationException($"No discount registered for customer type {order.Customer}.");
++        return subtotal - discount.Amount(subtotal);
+     }
+ }

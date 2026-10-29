@@ -1,0 +1,9 @@
+A	Shop.Tests/DiscountTests.cs
+M	Shop.Tests/PriceCalculatorTests.cs
+A	Shop/Discounts/CustomerDiscounts.cs
+A	Shop/Discounts/IDiscount.cs
+A	Shop/Discounts/LoyalDiscount.cs
+A	Shop/Discounts/NoDiscount.cs
+A	Shop/Discounts/PartnerDiscount.cs
+A	Shop/Discounts/StudentDiscount.cs
+M	Shop/Pricing.cs

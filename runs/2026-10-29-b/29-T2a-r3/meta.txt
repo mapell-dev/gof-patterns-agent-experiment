@@ -1,0 +1,10 @@
+id=29-T2a-r3
+task=T2
+variant=a
+rep=3
+start=2026-10-29T15:54:32Z
+end=2026-10-29T15:54:55Z
+claude_rc=0
+test_rc=0
+base=fce75e9bc868b382a872dc7d2bfbb36327f9d087
+skill_sha256=a588e53694cce7815d658c09ea28d9f6d88856a25caa41b36dec6c778585c867

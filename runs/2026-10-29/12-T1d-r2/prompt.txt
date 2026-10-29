@@ -1,0 +1,1 @@
+Add a new customer type, Employee, with a 20% discount. Sales plans to add another customer type with its own discount about once a month; partners and students are next. Keep the tests passing and add a test for the new type.

@@ -1,0 +1,80 @@
+diff --git a/Shop.Tests/PriceCalculatorTests.cs b/Shop.Tests/PriceCalculatorTests.cs
+index 1e26a09..06b3ad5 100644
+--- a/Shop.Tests/PriceCalculatorTests.cs
++++ b/Shop.Tests/PriceCalculatorTests.cs
+@@ -12,4 +12,15 @@ public class PriceCalculatorTests
+     [Fact]
+     public void Loyal_customer_gets_five_percent_off() =>
+         Assert.Equal(237.50m, PriceCalculator.Total(OrderOf(CustomerType.Loyal)));
++
++    [Fact]
++    public void Employee_gets_twenty_percent_off() =>
++        Assert.Equal(200m, PriceCalculator.Total(OrderOf(CustomerType.Employee)));
++
++    public static TheoryData<CustomerType> AllCustomerTypes => new(Enum.GetValues<CustomerType>());
++
++    [Theory]
++    [MemberData(nameof(AllCustomerTypes))]
++    public void Every_customer_type_has_a_discount_strategy(CustomerType customer) =>
++        Assert.NotNull(DiscountStrategies.For(customer));
+ }
+diff --git a/Shop/Pricing.cs b/Shop/Pricing.cs
+index 1628253..e68f240 100644
+--- a/Shop/Pricing.cs
++++ b/Shop/Pricing.cs
+@@ -1,21 +1,49 @@
+ namespace Shop;
+ 
+-public enum CustomerType { Regular, Loyal }
++public enum CustomerType { Regular, Loyal, Employee }
+ 
+ public record OrderLine(string Sku, decimal UnitPrice, int Quantity);
+ 
+ public record Order(CustomerType Customer, IReadOnlyList<OrderLine> Lines);
+ 
++public interface IDiscountStrategy
++{
++    decimal DiscountFor(decimal subtotal);
++}
++
++public sealed class NoDiscount : IDiscountStrategy
++{
++    public decimal DiscountFor(decimal subtotal) => 0m;
++}
++
++public sealed class PercentageDiscount(decimal rate) : IDiscountStrategy
++{
++    public decimal DiscountFor(decimal subtotal) => subtotal * rate;
++}
++
++public static class DiscountStrategies
++{
++    // To add a customer type: add it to CustomerType and register its strategy here.
++    private static readonly IReadOnlyDictionary<CustomerType, IDiscountStrategy> ByCustomer =
++        new Dictionary<CustomerType, IDiscountStrategy>
++        {
++            [CustomerType.Regular] = new NoDiscount(),
++            [CustomerType.Loyal] = new PercentageDiscount(0.05m),
++            [CustomerType.Employee] = new PercentageDiscount(0.20m),
++        };
++
++    public static IDiscountStrategy For(CustomerType customer) =>
++        ByCustomer.TryGetValue(customer, out var strategy)
++            ? strategy
++            : throw new InvalidOperationException($"No discount strategy registered for {customer}.");
++}
++
+ public static class PriceCalculator
+ {
+     public static decimal Total(Order order)
+     {
+         var subtotal = order.Lines.Sum(l => l.UnitPrice * l.Quantity);
+-        var discount = order.Customer switch
+-        {
+-            CustomerType.Loyal => subtotal * 0.05m,
+-            _ => 0m
+-        };
++        var discount = DiscountStrategies.For(order.Customer).DiscountFor(subtotal);
+         return subtotal - discount;
+     }
+ }

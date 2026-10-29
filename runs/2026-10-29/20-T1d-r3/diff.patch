@@ -1,0 +1,46 @@
+diff --git a/Shop.Tests/PriceCalculatorTests.cs b/Shop.Tests/PriceCalculatorTests.cs
+index 1e26a09..60d8308 100644
+--- a/Shop.Tests/PriceCalculatorTests.cs
++++ b/Shop.Tests/PriceCalculatorTests.cs
+@@ -12,4 +12,8 @@ public class PriceCalculatorTests
+     [Fact]
+     public void Loyal_customer_gets_five_percent_off() =>
+         Assert.Equal(237.50m, PriceCalculator.Total(OrderOf(CustomerType.Loyal)));
++
++    [Fact]
++    public void Employee_gets_twenty_percent_off() =>
++        Assert.Equal(200m, PriceCalculator.Total(OrderOf(CustomerType.Employee)));
+ }
+diff --git a/Shop/Pricing.cs b/Shop/Pricing.cs
+index 1628253..3104709 100644
+--- a/Shop/Pricing.cs
++++ b/Shop/Pricing.cs
+@@ -1,6 +1,6 @@
+ namespace Shop;
+ 
+-public enum CustomerType { Regular, Loyal }
++public enum CustomerType { Regular, Loyal, Employee }
+ 
+ public record OrderLine(string Sku, decimal UnitPrice, int Quantity);
+ 
+@@ -11,11 +11,14 @@ public static class PriceCalculator
+     public static decimal Total(Order order)
+     {
+         var subtotal = order.Lines.Sum(l => l.UnitPrice * l.Quantity);
+-        var discount = order.Customer switch
+-        {
+-            CustomerType.Loyal => subtotal * 0.05m,
+-            _ => 0m
+-        };
+-        return subtotal - discount;
++        return subtotal - subtotal * DiscountRate(order.Customer);
+     }
++
++    // A new customer type needs one enum member and one line here.
++    public static decimal DiscountRate(CustomerType customer) => customer switch
++    {
++        CustomerType.Loyal => 0.05m,
++        CustomerType.Employee => 0.20m,
++        _ => 0m
++    };
+ }

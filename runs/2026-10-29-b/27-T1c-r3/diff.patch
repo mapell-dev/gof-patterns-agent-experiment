@@ -1,0 +1,109 @@
+diff --git a/Shop.Tests/DiscountTests.cs b/Shop.Tests/DiscountTests.cs
+new file mode 100644
+index 0000000..d5203d3
+--- /dev/null
++++ b/Shop.Tests/DiscountTests.cs
+@@ -0,0 +1,16 @@
++using Shop;
++
++public class DiscountTests
++{
++    [Fact]
++    public void No_discount_takes_nothing_off() =>
++        Assert.Equal(0m, new NoDiscount().DiscountFor(200m));
++
++    [Fact]
++    public void Loyal_discount_is_five_percent() =>
++        Assert.Equal(10m, new LoyalDiscount().DiscountFor(200m));
++
++    [Fact]
++    public void Employee_discount_is_twenty_percent() =>
++        Assert.Equal(40m, new EmployeeDiscount().DiscountFor(200m));
++}
+diff --git a/Shop.Tests/PriceCalculatorTests.cs b/Shop.Tests/PriceCalculatorTests.cs
+index 1e26a09..1ef987f 100644
+--- a/Shop.Tests/PriceCalculatorTests.cs
++++ b/Shop.Tests/PriceCalculatorTests.cs
+@@ -12,4 +12,15 @@ public class PriceCalculatorTests
+     [Fact]
+     public void Loyal_customer_gets_five_percent_off() =>
+         Assert.Equal(237.50m, PriceCalculator.Total(OrderOf(CustomerType.Loyal)));
++
++    [Fact]
++    public void Employee_customer_gets_twenty_percent_off() =>
++        Assert.Equal(200m, PriceCalculator.Total(OrderOf(CustomerType.Employee)));
++
++    [Theory]
++    [MemberData(nameof(AllCustomerTypes))]
++    public void Every_customer_type_has_a_registered_discount(CustomerType customer) =>
++        PriceCalculator.Total(OrderOf(customer));
++
++    public static TheoryData<CustomerType> AllCustomerTypes() => new(Enum.GetValues<CustomerType>());
+ }
+diff --git a/Shop/Discounts.cs b/Shop/Discounts.cs
+new file mode 100644
+index 0000000..16ec9a6
+--- /dev/null
++++ b/Shop/Discounts.cs
+@@ -0,0 +1,22 @@
++namespace Shop;
++
++/// <summary>The discount a customer type receives on an order subtotal.</summary>
++public interface ICustomerDiscount
++{
++    decimal DiscountFor(decimal subtotal);
++}
++
++public sealed class NoDiscount : ICustomerDiscount
++{
++    public decimal DiscountFor(decimal subtotal) => 0m;
++}
++
++public sealed class LoyalDiscount : ICustomerDiscount
++{
++    public decimal DiscountFor(decimal subtotal) => subtotal * 0.05m;
++}
++
++public sealed class EmployeeDiscount : ICustomerDiscount
++{
++    public decimal DiscountFor(decimal subtotal) => subtotal * 0.20m;
++}
+diff --git a/Shop/Pricing.cs b/Shop/Pricing.cs
+index 1628253..c89dbfe 100644
+--- a/Shop/Pricing.cs
++++ b/Shop/Pricing.cs
+@@ -1,6 +1,6 @@
+ namespace Shop;
+ 
+-public enum CustomerType { Regular, Loyal }
++public enum CustomerType { Regular, Loyal, Employee }
+ 
+ public record OrderLine(string Sku, decimal UnitPrice, int Quantity);
+ 
+@@ -8,14 +8,20 @@ public record Order(CustomerType Customer, IReadOnlyList<OrderLine> Lines);
+ 
+ public static class PriceCalculator
+ {
++    // To add a customer type: add the enum value, write its ICustomerDiscount, and register it here.
++    private static readonly IReadOnlyDictionary<CustomerType, ICustomerDiscount> Discounts =
++        new Dictionary<CustomerType, ICustomerDiscount>
++        {
++            [CustomerType.Regular] = new NoDiscount(),
++            [CustomerType.Loyal] = new LoyalDiscount(),
++            [CustomerType.Employee] = new EmployeeDiscount(),
++        };
++
+     public static decimal Total(Order order)
+     {
+         var subtotal = order.Lines.Sum(l => l.UnitPrice * l.Quantity);
+-        var discount = order.Customer switch
+-        {
+-            CustomerType.Loyal => subtotal * 0.05m,
+-            _ => 0m
+-        };
+-        return subtotal - discount;
++        if (!Discounts.TryGetValue(order.Customer, out var discount))
++            throw new InvalidOperationException($"No discount registered for customer type {order.Customer}.");
++        return subtotal - discount.DiscountFor(subtotal);
+     }
+ }

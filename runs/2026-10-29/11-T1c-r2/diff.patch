@@ -1,0 +1,116 @@
+diff --git a/Shop.Tests/DiscountTests.cs b/Shop.Tests/DiscountTests.cs
+new file mode 100644
+index 0000000..21718f8
+--- /dev/null
++++ b/Shop.Tests/DiscountTests.cs
+@@ -0,0 +1,24 @@
++using Shop;
++
++public class DiscountTests
++{
++    [Fact]
++    public void No_discount_takes_nothing_off() =>
++        Assert.Equal(0m, new NoDiscount().DiscountOn(250m));
++
++    [Fact]
++    public void Loyal_discount_is_five_percent() =>
++        Assert.Equal(12.50m, new LoyalDiscount().DiscountOn(250m));
++
++    [Fact]
++    public void Employee_discount_is_twenty_percent() =>
++        Assert.Equal(50m, new EmployeeDiscount().DiscountOn(250m));
++
++    public static TheoryData<CustomerType> AllCustomerTypes() => new(Enum.GetValues<CustomerType>());
++
++    // Guards against adding a customer type without registering its discount.
++    [Theory]
++    [MemberData(nameof(AllCustomerTypes))]
++    public void Every_customer_type_has_a_discount(CustomerType customer) =>
++        Assert.NotNull(CustomerDiscounts.For(customer));
++}
+diff --git a/Shop.Tests/PriceCalculatorTests.cs b/Shop.Tests/PriceCalculatorTests.cs
+index 1e26a09..60d8308 100644
+--- a/Shop.Tests/PriceCalculatorTests.cs
++++ b/Shop.Tests/PriceCalculatorTests.cs
+@@ -12,4 +12,8 @@ public class PriceCalculatorTests
+     [Fact]
+     public void Loyal_customer_gets_five_percent_off() =>
+         Assert.Equal(237.50m, PriceCalculator.Total(OrderOf(CustomerType.Loyal)));
++
++    [Fact]
++    public void Employee_gets_twenty_percent_off() =>
++        Assert.Equal(200m, PriceCalculator.Total(OrderOf(CustomerType.Employee)));
+ }
+diff --git a/Shop/Discounts.cs b/Shop/Discounts.cs
+new file mode 100644
+index 0000000..62fd92e
+--- /dev/null
++++ b/Shop/Discounts.cs
+@@ -0,0 +1,42 @@
++namespace Shop;
++
++/// <summary>Discount rule for one customer type. Returns the amount to take off the subtotal.</summary>
++public interface ICustomerDiscount
++{
++    decimal DiscountOn(decimal subtotal);
++}
++
++public sealed class NoDiscount : ICustomerDiscount
++{
++    public decimal DiscountOn(decimal subtotal) => 0m;
++}
++
++public sealed class LoyalDiscount : ICustomerDiscount
++{
++    public decimal DiscountOn(decimal subtotal) => subtotal * 0.05m;
++}
++
++public sealed class EmployeeDiscount : ICustomerDiscount
++{
++    public decimal DiscountOn(decimal subtotal) => subtotal * 0.20m;
++}
++
++/// <summary>
++/// Maps each customer type to its discount. To add a customer type: add the enum value,
++/// write a new ICustomerDiscount class, and register it here. Existing discounts stay untouched.
++/// </summary>
++public static class CustomerDiscounts
++{
++    private static readonly IReadOnlyDictionary<CustomerType, ICustomerDiscount> ByType =
++        new Dictionary<CustomerType, ICustomerDiscount>
++        {
++            [CustomerType.Regular] = new NoDiscount(),
++            [CustomerType.Loyal] = new LoyalDiscount(),
++            [CustomerType.Employee] = new EmployeeDiscount(),
++        };
++
++    public static ICustomerDiscount For(CustomerType customer) =>
++        ByType.TryGetValue(customer, out var discount)
++            ? discount
++            : throw new InvalidOperationException($"No discount registered for customer type {customer}.");
++}
+diff --git a/Shop/Pricing.cs b/Shop/Pricing.cs
+index 1628253..98372e8 100644
+--- a/Shop/Pricing.cs
++++ b/Shop/Pricing.cs
+@@ -1,6 +1,6 @@
+ namespace Shop;
+ 
+-public enum CustomerType { Regular, Loyal }
++public enum CustomerType { Regular, Loyal, Employee }
+ 
+ public record OrderLine(string Sku, decimal UnitPrice, int Quantity);
+ 
+@@ -11,11 +11,7 @@ public static class PriceCalculator
+     public static decimal Total(Order order)
+     {
+         var subtotal = order.Lines.Sum(l => l.UnitPrice * l.Quantity);
+-        var discount = order.Customer switch
+-        {
+-            CustomerType.Loyal => subtotal * 0.05m,
+-            _ => 0m
+-        };
++        var discount = CustomerDiscounts.For(order.Customer).DiscountOn(subtotal);
+         return subtotal - discount;
+     }
+ }

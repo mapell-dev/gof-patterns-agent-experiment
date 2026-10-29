@@ -1,0 +1,10 @@
+id=12-T1d-r2
+task=T1
+variant=d
+rep=2
+start=2026-10-29T14:46:50Z
+end=2026-10-29T14:47:34Z
+claude_rc=0
+test_rc=0
+base=fa60492c91c5011edf80700c64f9cfd73d8d5056
+skill_sha256=a588e53694cce7815d658c09ea28d9f6d88856a25caa41b36dec6c778585c867

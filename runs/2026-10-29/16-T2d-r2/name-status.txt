@@ -1,0 +1,2 @@
+M	Shop.Tests/PriceCalculatorTests.cs
+M	Shop/Pricing.cs

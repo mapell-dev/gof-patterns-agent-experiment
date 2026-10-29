@@ -1,0 +1,1 @@
+Orders with a subtotal of 1,000 or more get an extra 3% off the amount left after the customer discount. Keep the tests passing and add a test for the new rule. This is a promotion for this quarter only; it will be removed at the end of December, so keep the change small and easy to delete.

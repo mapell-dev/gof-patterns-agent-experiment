@@ -1,0 +1,10 @@
+id=08-T2d-r1
+task=T2
+variant=d
+rep=1
+start=2026-10-29T14:43:07Z
+end=2026-10-29T14:43:37Z
+claude_rc=0
+test_rc=0
+base=1c1cfd19cb267d25bccc01cc6c87b4c4d576b0b3
+skill_sha256=a588e53694cce7815d658c09ea28d9f6d88856a25caa41b36dec6c778585c867

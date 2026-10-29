@@ -1,0 +1,33 @@
+diff --git a/Shop.Tests/PriceCalculatorTests.cs b/Shop.Tests/PriceCalculatorTests.cs
+index 1e26a09..b114d44 100644
+--- a/Shop.Tests/PriceCalculatorTests.cs
++++ b/Shop.Tests/PriceCalculatorTests.cs
+@@ -12,4 +12,13 @@ public class PriceCalculatorTests
+     [Fact]
+     public void Loyal_customer_gets_five_percent_off() =>
+         Assert.Equal(237.50m, PriceCalculator.Total(OrderOf(CustomerType.Loyal)));
++
++    // TEMPORARY Q4 promotion — remove with the promotion at end of December.
++    [Fact]
++    public void Q4_promotion_takes_three_percent_off_after_customer_discount_when_subtotal_is_at_least_1000()
++    {
++        Order Big(CustomerType c) => new(c, [new OrderLine("A", 500m, 2)]);
++        Assert.Equal(970m, PriceCalculator.Total(Big(CustomerType.Regular)));
++        Assert.Equal(921.50m, PriceCalculator.Total(Big(CustomerType.Loyal)));
++    }
+ }
+diff --git a/Shop/Pricing.cs b/Shop/Pricing.cs
+index 1628253..8296fba 100644
+--- a/Shop/Pricing.cs
++++ b/Shop/Pricing.cs
+@@ -16,6 +16,9 @@ public static class PriceCalculator
+             CustomerType.Loyal => subtotal * 0.05m,
+             _ => 0m
+         };
+-        return subtotal - discount;
++        var total = subtotal - discount;
++        // TEMPORARY Q4 promotion — remove at end of December (this line and the test that covers it).
++        if (subtotal >= 1000m) total -= total * 0.03m;
++        return total;
+     }
+ }

@@ -1,0 +1,11 @@
+  Determining projects to restore...
+  Restored /private/tmp/claude-501/-Users-mszupke-workspace-publishing-platform/154bb5eb-3446-4211-91de-023a4eaab315/scratchpad/gof-work/09-T1a-r2/Shop/Shop.csproj (in 93 ms).
+  Restored /private/tmp/claude-501/-Users-mszupke-workspace-publishing-platform/154bb5eb-3446-4211-91de-023a4eaab315/scratchpad/gof-work/09-T1a-r2/Shop.Tests/Shop.Tests.csproj (in 117 ms).
+/usr/local/share/dotnet/sdk/11.0.100-preview.6.26359.118/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.RuntimeIdentifierInference.targets(385,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [/private/tmp/claude-501/-Users-mszupke-workspace-publishing-platform/154bb5eb-3446-4211-91de-023a4eaab315/scratchpad/gof-work/09-T1a-r2/Shop.Tests/Shop.Tests.csproj]
+/usr/local/share/dotnet/sdk/11.0.100-preview.6.26359.118/Sdks/Microsoft.NET.Sdk/targets/Microsoft.NET.RuntimeIdentifierInference.targets(385,5): message NETSDK1057: You are using a preview version of .NET. See: https://aka.ms/dotnet-support-policy [/private/tmp/claude-501/-Users-mszupke-workspace-publishing-platform/154bb5eb-3446-4211-91de-023a4eaab315/scratchpad/gof-work/09-T1a-r2/Shop/Shop.csproj]
+  Shop -> /private/tmp/claude-501/-Users-mszupke-workspace-publishing-platform/154bb5eb-3446-4211-91de-023a4eaab315/scratchpad/gof-work/09-T1a-r2/Shop/bin/Debug/net10.0/Shop.dll
+  Shop.Tests -> /private/tmp/claude-501/-Users-mszupke-workspace-publishing-platform/154bb5eb-3446-4211-91de-023a4eaab315/scratchpad/gof-work/09-T1a-r2/Shop.Tests/bin/Debug/net10.0/Shop.Tests.dll
+Test run for /private/tmp/claude-501/-Users-mszupke-workspace-publishing-platform/154bb5eb-3446-4211-91de-023a4eaab315/scratchpad/gof-work/09-T1a-r2/Shop.Tests/bin/Debug/net10.0/Shop.Tests.dll (.NETCoreApp,Version=v10.0)
+A total of 1 test files matched the specified pattern.
+
+Passed!  - Failed:     0, Passed:     4, Skipped:     0, Total:     4, Duration: 11 ms - Shop.Tests.dll (net10.0)

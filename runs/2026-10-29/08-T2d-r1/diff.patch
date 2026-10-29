@@ -1,0 +1,34 @@
+diff --git a/Shop.Tests/PriceCalculatorTests.cs b/Shop.Tests/PriceCalculatorTests.cs
+index 1e26a09..7a15b7d 100644
+--- a/Shop.Tests/PriceCalculatorTests.cs
++++ b/Shop.Tests/PriceCalculatorTests.cs
+@@ -12,4 +12,15 @@ public class PriceCalculatorTests
+     [Fact]
+     public void Loyal_customer_gets_five_percent_off() =>
+         Assert.Equal(237.50m, PriceCalculator.Total(OrderOf(CustomerType.Loyal)));
++
++    private static Order LargeOrderOf(CustomerType customer) =>
++        new(customer, [new OrderLine("A", 500m, 2)]);
++
++    [Fact]
++    public void Regular_customer_gets_three_percent_off_large_order() =>
++        Assert.Equal(970m, PriceCalculator.Total(LargeOrderOf(CustomerType.Regular)));
++
++    [Fact]
++    public void Loyal_customer_gets_three_percent_off_after_loyalty_discount_on_large_order() =>
++        Assert.Equal(921.50m, PriceCalculator.Total(LargeOrderOf(CustomerType.Loyal)));
+ }
+diff --git a/Shop/Pricing.cs b/Shop/Pricing.cs
+index 1628253..93747aa 100644
+--- a/Shop/Pricing.cs
++++ b/Shop/Pricing.cs
+@@ -16,6 +16,8 @@ public static class PriceCalculator
+             CustomerType.Loyal => subtotal * 0.05m,
+             _ => 0m
+         };
+-        return subtotal - discount;
++        var afterDiscount = subtotal - discount;
++        var bulkDiscount = subtotal >= 1000m ? afterDiscount * 0.03m : 0m;
++        return afterDiscount - bulkDiscount;
+     }
+ }

@@ -1,0 +1,4 @@
+52	0	Shop.Tests/DiscountTests.cs
+31	0	Shop.Tests/PriceCalculatorTests.cs
+62	0	Shop/Discounts.cs
+14	10	Shop/Pricing.cs

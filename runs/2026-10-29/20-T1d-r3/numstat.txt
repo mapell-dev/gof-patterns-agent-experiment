@@ -1,0 +1,2 @@
+4	0	Shop.Tests/PriceCalculatorTests.cs
+10	7	Shop/Pricing.cs

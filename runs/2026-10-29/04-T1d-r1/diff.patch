@@ -1,0 +1,54 @@
+diff --git a/Shop.Tests/PriceCalculatorTests.cs b/Shop.Tests/PriceCalculatorTests.cs
+index 1e26a09..aa474f7 100644
+--- a/Shop.Tests/PriceCalculatorTests.cs
++++ b/Shop.Tests/PriceCalculatorTests.cs
+@@ -12,4 +12,15 @@ public class PriceCalculatorTests
+     [Fact]
+     public void Loyal_customer_gets_five_percent_off() =>
+         Assert.Equal(237.50m, PriceCalculator.Total(OrderOf(CustomerType.Loyal)));
++
++    [Fact]
++    public void Employee_gets_twenty_percent_off() =>
++        Assert.Equal(200m, PriceCalculator.Total(OrderOf(CustomerType.Employee)));
++
++    [Fact]
++    public void Every_customer_type_has_a_discount_rate()
++    {
++        foreach (var customer in Enum.GetValues<CustomerType>())
++            PriceCalculator.DiscountRate(customer);
++    }
+ }
+diff --git a/Shop/Pricing.cs b/Shop/Pricing.cs
+index 1628253..3a510af 100644
+--- a/Shop/Pricing.cs
++++ b/Shop/Pricing.cs
+@@ -1,6 +1,6 @@
+ namespace Shop;
+ 
+-public enum CustomerType { Regular, Loyal }
++public enum CustomerType { Regular, Loyal, Employee }
+ 
+ public record OrderLine(string Sku, decimal UnitPrice, int Quantity);
+ 
+@@ -11,11 +11,15 @@ public static class PriceCalculator
+     public static decimal Total(Order order)
+     {
+         var subtotal = order.Lines.Sum(l => l.UnitPrice * l.Quantity);
+-        var discount = order.Customer switch
+-        {
+-            CustomerType.Loyal => subtotal * 0.05m,
+-            _ => 0m
+-        };
+-        return subtotal - discount;
++        return subtotal - subtotal * DiscountRate(order.Customer);
+     }
++
++    // One line per customer type. No catch-all: a type added without a rate throws instead of silently getting 0%.
++    public static decimal DiscountRate(CustomerType customer) => customer switch
++    {
++        CustomerType.Regular => 0m,
++        CustomerType.Loyal => 0.05m,
++        CustomerType.Employee => 0.20m,
++        _ => throw new ArgumentOutOfRangeException(nameof(customer), customer, "No discount rate defined.")
++    };
+ }

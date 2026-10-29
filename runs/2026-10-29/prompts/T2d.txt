@@ -1,0 +1,1 @@
+Orders with a subtotal of 1,000 or more get an extra 3% off the amount left after the customer discount. Keep the tests passing and add a test for the new rule.

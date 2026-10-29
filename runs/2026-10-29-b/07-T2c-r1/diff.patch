@@ -1,0 +1,33 @@
+diff --git a/Shop.Tests/PriceCalculatorTests.cs b/Shop.Tests/PriceCalculatorTests.cs
+index 1e26a09..c5398af 100644
+--- a/Shop.Tests/PriceCalculatorTests.cs
++++ b/Shop.Tests/PriceCalculatorTests.cs
+@@ -12,4 +12,13 @@ public class PriceCalculatorTests
+     [Fact]
+     public void Loyal_customer_gets_five_percent_off() =>
+         Assert.Equal(237.50m, PriceCalculator.Total(OrderOf(CustomerType.Loyal)));
++
++    // TEMPORARY Q4 2026 promotion, remove with the rule in PriceCalculator.Total.
++    [Theory]
++    [InlineData(CustomerType.Regular, 999.99, 999.99)]
++    [InlineData(CustomerType.Regular, 1000, 970)]
++    [InlineData(CustomerType.Loyal, 1000, 921.50)] // 1000 - 5% = 950, then - 3% = 921.50
++    public void Q4_promotion_takes_three_percent_off_orders_of_1000_or_more(
++        CustomerType customer, decimal unitPrice, decimal expected) =>
++        Assert.Equal(expected, PriceCalculator.Total(new(customer, [new OrderLine("A", unitPrice, 1)])));
+ }
+diff --git a/Shop/Pricing.cs b/Shop/Pricing.cs
+index 1628253..a02d5be 100644
+--- a/Shop/Pricing.cs
++++ b/Shop/Pricing.cs
+@@ -16,6 +16,9 @@ public static class PriceCalculator
+             CustomerType.Loyal => subtotal * 0.05m,
+             _ => 0m
+         };
+-        return subtotal - discount;
++        var total = subtotal - discount;
++        // TEMPORARY Q4 2026 promotion, remove at end of December: 3% off orders with subtotal >= 1,000.
++        if (subtotal >= 1000m) total -= total * 0.03m;
++        return total;
+     }
+ }

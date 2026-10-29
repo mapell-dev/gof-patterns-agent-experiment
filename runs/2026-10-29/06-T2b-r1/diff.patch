@@ -1,0 +1,72 @@
+diff --git a/Shop.Tests/PriceCalculatorTests.cs b/Shop.Tests/PriceCalculatorTests.cs
+index 1e26a09..feb81d5 100644
+--- a/Shop.Tests/PriceCalculatorTests.cs
++++ b/Shop.Tests/PriceCalculatorTests.cs
+@@ -12,4 +12,15 @@ public class PriceCalculatorTests
+     [Fact]
+     public void Loyal_customer_gets_five_percent_off() =>
+         Assert.Equal(237.50m, PriceCalculator.Total(OrderOf(CustomerType.Loyal)));
++
++    private static Order OrderWithSubtotal(CustomerType customer, decimal subtotal) =>
++        new(customer, [new OrderLine("A", subtotal, 1)]);
++
++    [Theory]
++    [InlineData(CustomerType.Regular, 999.99, 999.99)]   // below threshold: no extra discount
++    [InlineData(CustomerType.Regular, 1000, 970.00)]     // 1000 * 0.97
++    [InlineData(CustomerType.Loyal, 1000, 921.50)]       // 1000 * 0.95 = 950, then * 0.97
++    public void Orders_of_1000_or_more_get_three_percent_off_after_customer_discount(
++        CustomerType customer, decimal subtotal, decimal expected) =>
++        Assert.Equal(expected, PriceCalculator.Total(OrderWithSubtotal(customer, subtotal)));
+ }
+diff --git a/Shop/Pricing.cs b/Shop/Pricing.cs
+index 1628253..a764e14 100644
+--- a/Shop/Pricing.cs
++++ b/Shop/Pricing.cs
+@@ -6,16 +6,40 @@ public record OrderLine(string Sku, decimal UnitPrice, int Quantity);
+ 
+ public record Order(CustomerType Customer, IReadOnlyList<OrderLine> Lines);
+ 
++// A discount step: takes the amount left after earlier steps and returns the new amount.
++public interface IDiscountStrategy
++{
++    decimal Apply(Order order, decimal subtotal, decimal amount);
++}
++
++public sealed class CustomerDiscount : IDiscountStrategy
++{
++    public decimal Apply(Order order, decimal subtotal, decimal amount) => order.Customer switch
++    {
++        CustomerType.Loyal => amount - amount * 0.05m,
++        _ => amount
++    };
++}
++
++public sealed class LargeOrderDiscount : IDiscountStrategy
++{
++    public const decimal Threshold = 1000m;
++
++    public decimal Apply(Order order, decimal subtotal, decimal amount) =>
++        subtotal >= Threshold ? amount - amount * 0.03m : amount;
++}
++
+ public static class PriceCalculator
+ {
+-    public static decimal Total(Order order)
++    // Applied in order; each strategy sees the amount left by the previous one.
++    private static readonly IReadOnlyList<IDiscountStrategy> DefaultDiscounts =
++        [new CustomerDiscount(), new LargeOrderDiscount()];
++
++    public static decimal Total(Order order) => Total(order, DefaultDiscounts);
++
++    public static decimal Total(Order order, IEnumerable<IDiscountStrategy> discounts)
+     {
+         var subtotal = order.Lines.Sum(l => l.UnitPrice * l.Quantity);
+-        var discount = order.Customer switch
+-        {
+-            CustomerType.Loyal => subtotal * 0.05m,
+-            _ => 0m
+-        };
+-        return subtotal - discount;
++        return discounts.Aggregate(subtotal, (amount, d) => d.Apply(order, subtotal, amount));
+     }
+ }
