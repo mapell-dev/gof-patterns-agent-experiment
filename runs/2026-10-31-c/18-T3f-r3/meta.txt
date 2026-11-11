@@ -1,0 +1,11 @@
+id=18-T3f-r3
+task=T3
+variant=f
+rep=3
+start=2026-10-31T19:35:27Z
+end=2026-10-31T19:36:09Z
+claude_rc=0
+test_rc=0
+base=65051a3699a3b25469695a7226a89aa7d1e6f943
+skill_sha256=a588e53694cce7815d658c09ea28d9f6d88856a25caa41b36dec6c778585c867
+test_rerun=2026-10-31T19:36:36Z (first test step failed: relative output path, log redirect could not open; workdir unchanged, diff re-verified)

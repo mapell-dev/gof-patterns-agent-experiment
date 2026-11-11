@@ -66,6 +66,18 @@ Add a new customer type, Employee, with a 20% discount. Sales plans to add anoth
 Add a new customer type, Employee, with a 20% discount. Sales plans to add another customer type with its own discount about once a month; partners and students are next. Keep the tests passing and add a test for the new type. Adding a customer type must not require changing the code of the existing discounts, and each discount must be testable on its own.
 ```
 
+**(e)**
+
+```text
+/gof-patterns Add a new customer type, Employee, with a 20% discount. Sales plans to add another customer type with its own discount about once a month; partners and students are next. Keep the tests passing and add a test for the new type.
+```
+
+**(f)**
+
+```text
+Add a new customer type, Employee, with a 20% discount. Sales plans to add another customer type with its own discount about once a month; partners and students are next. Keep the tests passing and add a test for the new type. Use the gof-patterns skill.
+```
+
 ### T2
 
 **(a) and (d)**
@@ -86,6 +98,18 @@ Orders with a subtotal of 1,000 or more get an extra 3% off the amount left afte
 Orders with a subtotal of 1,000 or more get an extra 3% off the amount left after the customer discount. Keep the tests passing and add a test for the new rule. This is a promotion for this quarter only; it will be removed at the end of December, so keep the change small and easy to delete.
 ```
 
+**(e)**
+
+```text
+/gof-patterns Orders with a subtotal of 1,000 or more get an extra 3% off the amount left after the customer discount. Keep the tests passing and add a test for the new rule.
+```
+
+**(f)**
+
+```text
+Orders with a subtotal of 1,000 or more get an extra 3% off the amount left after the customer discount. Keep the tests passing and add a test for the new rule. Use the gof-patterns skill.
+```
+
 ### T3
 
 **(a) and (d)**
@@ -104,6 +128,18 @@ Add two new customer types. Student: 10% off, but never more than 30 per order. 
 
 ```text
 Add two new customer types. Student: 10% off, but never more than 30 per order. Partner: 10% off when the subtotal is up to 1,000, and 15% off the whole order when it is above 1,000. Every customer's discount must also appear on the receipt as one line, for example "Loyal: 5% off" or "Student: 10% off, max 30". Sales plans to add another customer type with its own discount rule about once a month. Keep the tests passing and add tests for the new behavior. Adding a customer type must not require changing the code of the existing discounts, and each discount rule must be testable on its own.
+```
+
+**(e)**
+
+```text
+/gof-patterns Add two new customer types. Student: 10% off, but never more than 30 per order. Partner: 10% off when the subtotal is up to 1,000, and 15% off the whole order when it is above 1,000. Every customer's discount must also appear on the receipt as one line, for example "Loyal: 5% off" or "Student: 10% off, max 30". Sales plans to add another customer type with its own discount rule about once a month. Keep the tests passing and add tests for the new behavior.
+```
+
+**(f)**
+
+```text
+Add two new customer types. Student: 10% off, but never more than 30 per order. Partner: 10% off when the subtotal is up to 1,000, and 15% off the whole order when it is above 1,000. Every customer's discount must also appear on the receipt as one line, for example "Loyal: 5% off" or "Student: 10% off, max 30". Sales plans to add another customer type with its own discount rule about once a month. Keep the tests passing and add tests for the new behavior. Use the gof-patterns skill.
 ```
 
 T2 (b) deliberately asks for a pattern the task does not need. It measures obedience, not judgment, and the article says so.
@@ -135,6 +171,17 @@ What the probes showed (from the `system/init` event and the debug log):
 - First batch: with only `dotnet build` and `dotnet test` allowed, every run's first exploration command (`git ls-files && cat …`) was denied and 11 of 24 agents then never ran the tests themselves, so the second batch also allows read-only commands (`git ls-files/status/diff/log`, `ls`, `cat`, `find`, `grep`, `head`, `tail`). Write commands stay denied. Checked on run 1 of the second batch (T1a): the agent's opening `git ls-files && cat $(…)` is still refused (the `$(…)` substitution is not covered by an allowlist entry), but it then ran plain `git ls-files` and `dotnet test 2>&1 | tail` and both were allowed. One run is one sample; the batch table records per run whether the agent ran the tests itself.
 - `dotnet test` ran non-interactively under these flags with no permission denial. Per `claude --help` (not yet seen in a run), any other command is refused without a prompt and listed in the result's `permission_denials`, which is recorded.
 - Not checked: an actual file edit under `acceptEdits` in print mode (the probe was told not to edit). The first real run shows it; if it fails, the run is discarded and the setup fixed before the rest. (It worked: every run's edits were applied.)
+
+## Third batch: how the skill gets loaded (2026-10-31)
+
+In the second batch (d) relies on Claude loading the skill from its description, and in T2 it never did (0 of 3). The third batch asks what a user can do about that, with the skill file unchanged (same SHA-256):
+
+- (e) invokes the skill explicitly: `/gof-patterns` at the start of the message, followed by the (a) ticket. In print mode Claude Code loads the first skill named this way, with the rest of the line as its arguments.
+- (f) is the (a) ticket plus one sentence asking for the skill by name, without a slash: "Use the gof-patterns skill." Whether Claude then loads it is its own call.
+
+2 variants x 3 tasks x 3 repetitions = 18 runs, same baseline, script, isolation, allowlist, model and Claude Code version (2.1.310) as the second batch, in interleaved order, into `runs/2026-10-31-c/`: `run-experiment.sh runs/2026-10-31-c <work-root> 1 18 "e f"`. Both variants have the skill installed, as (d) does.
+
+How a load shows in the transcript, checked on 2026-10-31 with two Haiku probes (about 0.004 USD): an explicit `/gof-patterns` invocation leaves no `Skill` tool call and no other marker in the stream-json output, yet the model quoted the skill's "Before you finish" line verbatim with no file or tool access; the same question without the slash got "NONE". So `skill_loads` counts only loads Claude makes itself (a `Skill` tool call). For (e) the skill is loaded by the invocation, and the column reads 0 unless Claude also calls the tool.
 
 ## What is recorded per run
 

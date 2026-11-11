@@ -1,0 +1,107 @@
+diff --git a/Shop.Tests/PriceCalculatorTests.cs b/Shop.Tests/PriceCalculatorTests.cs
+index 1e26a09..fdb8aee 100644
+--- a/Shop.Tests/PriceCalculatorTests.cs
++++ b/Shop.Tests/PriceCalculatorTests.cs
+@@ -5,6 +5,9 @@ public class PriceCalculatorTests
+     private static Order OrderOf(CustomerType customer) =>
+         new(customer, [new OrderLine("A", 100m, 2), new OrderLine("B", 50m, 1)]);
+ 
++    private static Order OrderWithSubtotal(CustomerType customer, decimal subtotal) =>
++        new(customer, [new OrderLine("A", subtotal, 1)]);
++
+     [Fact]
+     public void Regular_customer_pays_the_subtotal() =>
+         Assert.Equal(250m, PriceCalculator.Total(OrderOf(CustomerType.Regular)));
+@@ -12,4 +15,37 @@ public class PriceCalculatorTests
+     [Fact]
+     public void Loyal_customer_gets_five_percent_off() =>
+         Assert.Equal(237.50m, PriceCalculator.Total(OrderOf(CustomerType.Loyal)));
++
++    [Fact]
++    public void Student_gets_ten_percent_off_below_the_cap() =>
++        Assert.Equal(225m, PriceCalculator.Total(OrderOf(CustomerType.Student)));
++
++    [Theory]
++    [InlineData(300, 270)]    // exactly at the cap: 10% = 30
++    [InlineData(1000, 970)]   // 10% would be 100, capped at 30
++    public void Student_discount_never_exceeds_thirty(decimal subtotal, decimal expected) =>
++        Assert.Equal(expected, PriceCalculator.Total(OrderWithSubtotal(CustomerType.Student, subtotal)));
++
++    [Theory]
++    [InlineData(250, 225)]       // 10%
++    [InlineData(1000, 900)]      // up to and including 1,000: 10%
++    [InlineData(1000.01, 850.0085)] // above 1,000: 15% of the whole order
++    [InlineData(2000, 1700)]
++    public void Partner_gets_ten_percent_up_to_1000_and_fifteen_above(decimal subtotal, decimal expected) =>
++        Assert.Equal(expected, PriceCalculator.Total(OrderWithSubtotal(CustomerType.Partner, subtotal)));
++
++    [Theory]
++    [InlineData(CustomerType.Regular, "Regular: no discount")]
++    [InlineData(CustomerType.Loyal, "Loyal: 5% off")]
++    [InlineData(CustomerType.Student, "Student: 10% off, max 30")]
++    [InlineData(CustomerType.Partner, "Partner: 10% off, 15% off above 1,000")]
++    public void Receipt_shows_one_discount_line_per_customer(CustomerType customer, string expected) =>
++        Assert.Equal(expected, PriceCalculator.DiscountLine(OrderOf(customer)));
++
++    [Fact]
++    public void Every_customer_type_has_a_discount_rule()
++    {
++        foreach (var customer in Enum.GetValues<CustomerType>())
++            Assert.NotNull(Discounts.For(customer));
++    }
+ }
+diff --git a/Shop/Pricing.cs b/Shop/Pricing.cs
+index 1628253..88dd99f 100644
+--- a/Shop/Pricing.cs
++++ b/Shop/Pricing.cs
+@@ -1,21 +1,42 @@
+ namespace Shop;
+ 
+-public enum CustomerType { Regular, Loyal }
++public enum CustomerType { Regular, Loyal, Student, Partner }
+ 
+ public record OrderLine(string Sku, decimal UnitPrice, int Quantity);
+ 
+ public record Order(CustomerType Customer, IReadOnlyList<OrderLine> Lines);
+ 
++// A customer's discount rule: how much comes off a subtotal, and how it reads on the receipt.
++public record Discount(string Description, Func<decimal, decimal> Amount);
++
++public static class Discounts
++{
++    // To add a customer type: add the enum value and one entry here.
++    private static readonly Dictionary<CustomerType, Discount> ByCustomer = new()
++    {
++        [CustomerType.Regular] = new("Regular: no discount", _ => 0m),
++        [CustomerType.Loyal] = new("Loyal: 5% off", subtotal => subtotal * 0.05m),
++        [CustomerType.Student] = new("Student: 10% off, max 30", subtotal => Math.Min(subtotal * 0.10m, 30m)),
++        [CustomerType.Partner] = new("Partner: 10% off, 15% off above 1,000",
++            subtotal => subtotal * (subtotal > 1000m ? 0.15m : 0.10m)),
++    };
++
++    public static Discount For(CustomerType customer) =>
++        ByCustomer.TryGetValue(customer, out var discount)
++            ? discount
++            : throw new InvalidOperationException($"No discount rule defined for customer type {customer}.");
++}
++
+ public static class PriceCalculator
+ {
++    public static decimal Subtotal(Order order) => order.Lines.Sum(l => l.UnitPrice * l.Quantity);
++
+     public static decimal Total(Order order)
+     {
+-        var subtotal = order.Lines.Sum(l => l.UnitPrice * l.Quantity);
+-        var discount = order.Customer switch
+-        {
+-            CustomerType.Loyal => subtotal * 0.05m,
+-            _ => 0m
+-        };
+-        return subtotal - discount;
++        var subtotal = Subtotal(order);
++        return subtotal - Discounts.For(order.Customer).Amount(subtotal);
+     }
++
++    // The single receipt line describing the customer's discount.
++    public static string DiscountLine(Order order) => Discounts.For(order.Customer).Description;
+ }

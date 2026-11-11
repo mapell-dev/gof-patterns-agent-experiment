@@ -1,11 +1,13 @@
 #!/bin/bash
 # Runs the GoF experiment as EXPERIMENT.md "Run protocol" and "Run setup" describe.
-# Usage: run-experiment.sh <out-dir> <work-root> <first> <last>   (run numbers 1..36, interleaved order)
+# Usage: run-experiment.sh <out-dir> <work-root> <first> <last> [variants]
+#   variants defaults to "a b c d" (36 runs); the third batch uses "e f" (18 runs). Interleaved order.
 set -u
 here=$(cd "$(dirname "$0")" && pwd)
-out=$1; work_root=$2; first=$3; last=$4
+out=$1; work_root=$2; first=$3; last=$4; variants=${5:-a b c d}
 claude_bin=${CLAUDE_BIN:-$(command -v claude)}
 mkdir -p "$out" "$work_root"
+out=$(cd "$out" && pwd)   # absolute: the test step runs after cd into the work dir
 
 # Prompts come verbatim from EXPERIMENT.md, never retyped.
 python3 - "$here/EXPERIMENT.md" "$out/prompts" <<'EOF' || { echo "PROMPT EXTRACTION FAILED"; exit 1; }
@@ -19,7 +21,7 @@ for task in ("T1", "T2", "T3"):
     for v1, v2, body in blocks:
         for v in (v1, v2):
             if v: got[v] = body
-    assert sorted(got) == ["a", "b", "c", "d"], (task, sorted(got))
+    assert sorted(got)[:4] == ["a", "b", "c", "d"] and set(got) <= set("abcdef"), (task, sorted(got))
     for v, body in got.items():
         (dest / f"{task}{v}.txt").write_text(body)
 EOF
@@ -30,7 +32,7 @@ skill_sha=$(shasum -a 256 "$here/skills/gof-patterns/SKILL.md" | cut -d' ' -f1)
 
 # Interleaved order: repetition, then task, then variant.
 order=()
-for rep in 1 2 3; do for task in T1 T2 T3; do for v in a b c d; do order+=("$task $v $rep"); done; done; done
+for rep in 1 2 3; do for task in T1 T2 T3; do for v in $variants; do order+=("$task $v $rep"); done; done; done
 
 for ((n = first; n <= last; n++)); do
   read -r task v rep <<<"${order[n-1]}"
@@ -39,7 +41,7 @@ for ((n = first; n <= last; n++)); do
   if [ -e "$dir/meta.txt" ]; then echo "$id already done, skipped"; continue; fi
   rm -rf "$wd"; mkdir -p "$dir" "$wd"
   cp -R "$here/baseline/." "$wd/"
-  if [ "$v" = d ]; then mkdir -p "$wd/.claude/skills"; cp -R "$here/skills/gof-patterns" "$wd/.claude/skills/"; fi
+  if [[ "$v" == [def] ]]; then mkdir -p "$wd/.claude/skills"; cp -R "$here/skills/gof-patterns" "$wd/.claude/skills/"; fi
   git -C "$wd" init -q
   printf 'bin/\nobj/\n' > "$wd/.git/info/exclude"
   git -C "$wd" add -A
